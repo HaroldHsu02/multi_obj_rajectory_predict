@@ -1,4 +1,12 @@
-from .tree import T_tree
+import os
+import sys
+
+# 添加项目根目录到Python路径（当直接运行此文件时）
+if __name__ == "__main__":
+    sys.path.append(os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..")))
+
+from T_Pattern_Tree.tree import T_tree
 
 
 def t_tree_dfs_prediction_recursive(

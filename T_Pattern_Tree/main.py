@@ -1,21 +1,29 @@
-from .config import RSU_COORDS, DATA_FILE_PATH, TRAIN_RATIO
-from .data_processor import load_and_transform_data
-from .utils import split_data
-from .tree import T_tree
-from .predictor import predict_next_rsu
+import os
+import sys
+
+# 添加项目根目录到Python路径（当直接运行此文件时）
+if __name__ == "__main__":
+    sys.path.append(os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..")))
+
+from T_Pattern_Tree.config import RSU_COORDS, DATA_FILE_PATH, TRAIN_RATIO
+from T_Pattern_Tree.data_processor import load_and_transform_data
+from T_Pattern_Tree.utils import split_data
+from T_Pattern_Tree.tree import T_tree
+from T_Pattern_Tree.predictor import predict_next_rsu
 
 
 def main():
     print("Starting RSU-based trajectory prediction adaptation...")
     print(f"RSU coordinates: {RSU_COORDS}")
-
+    ########################################################################
     # 1. Load and transform data
     all_rsu_sequences = load_and_transform_data(DATA_FILE_PATH, RSU_COORDS)
 
     if not all_rsu_sequences:
         print("No RSU sequences loaded or generated. Exiting.")
         return
-
+    ########################################################################
     # 2. Split data
     train_sequences, test_sequences = split_data(
         all_rsu_sequences, train_ratio=TRAIN_RATIO)
@@ -23,7 +31,7 @@ def main():
     if not train_sequences:
         print("No training sequences available after split. Exiting.")
         return
-
+    ########################################################################
     # 3. Build T_tree
     prediction_tree_root = T_tree("root")
 
@@ -43,7 +51,7 @@ def main():
                 current_t_node = new_child
 
     print("T_tree built successfully from training data.")
-
+    ########################################################################
     # 4. Evaluate predictions
     correct_predictions = 0
     total_predictions = 0

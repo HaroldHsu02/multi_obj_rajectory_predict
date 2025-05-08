@@ -1,6 +1,13 @@
 import numpy as np
 import os
-from .utils import get_closest_rsu
+import sys
+
+# 添加项目根目录到Python路径（当直接运行此文件时）
+if __name__ == "__main__":
+    sys.path.append(os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..")))
+
+from T_Pattern_Tree.utils import get_closest_rsu
 
 
 def load_and_transform_data(npy_filepath, rsu_map):
@@ -15,14 +22,13 @@ def load_and_transform_data(npy_filepath, rsu_map):
         list: A list of lists, where each inner list is a vehicle's trajectory
               represented as a sequence of RSU IDs.
     """
+    # 确保目录存在
+    os.makedirs(os.path.dirname(npy_filepath), exist_ok=True)
+
     if not os.path.exists(npy_filepath):
         print(f"Error: Data file not found at {npy_filepath}")
-        print("Please ensure 'rome_trajectory.npy' exists or update DATA_FILE_PATH.")
-        # Create a dummy file for demonstration if it doesn't exist
-        print("Creating a dummy 'rome_trajectory.npy' for demonstration purposes.")
-        dummy_data_dir = os.path.dirname(npy_filepath)
-        if dummy_data_dir and not os.path.exists(dummy_data_dir):
-            os.makedirs(dummy_data_dir)
+        print("Creating dummy data file...")
+
         # Dummy data: 5 timesteps, 2 vehicles, 2D coords (already scaled)
         dummy_vehicle1_coords = np.array(
             [
@@ -48,7 +54,11 @@ def load_and_transform_data(npy_filepath, rsu_map):
         np.save(npy_filepath, dummy_trajectories)
         print(f"Dummy data saved to {npy_filepath}")
 
-    vehicle_coord_trajectories = np.load(npy_filepath, allow_pickle=True)
+    try:
+        vehicle_coord_trajectories = np.load(npy_filepath, allow_pickle=True)
+    except Exception as e:
+        print(f"Error loading data file: {e}")
+        return []
 
     # 转置数据以获取每个车辆的轨迹
     # 从(num_timesteps, num_vehicles, 2)转换为(num_vehicles, num_timesteps, 2)

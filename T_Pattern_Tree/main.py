@@ -1,6 +1,6 @@
 import os
 import sys
-
+import numpy as np
 # 添加项目根目录到Python路径（当直接运行此文件时）
 if __name__ == "__main__":
     sys.path.append(os.path.abspath(
@@ -20,15 +20,18 @@ def main():
     # 1. Load and transform data
     all_rsu_sequences = load_and_transform_data(DATA_FILE_PATH, RSU_COORDS)
 
-    if not all_rsu_sequences:
+    if all_rsu_sequences.size == 0:
         print("No RSU sequences loaded or generated. Exiting.")
         return
+
+    print(f"RSU sequences shape: {all_rsu_sequences.shape}")
     ########################################################################
     # 2. Split data
+    # 划分数据集为训练集和测试集
     train_sequences, test_sequences = split_data(
         all_rsu_sequences, train_ratio=TRAIN_RATIO)
 
-    if not train_sequences:
+    if len(train_sequences) == 0:
         print("No training sequences available after split. Exiting.")
         return
     ########################################################################
@@ -56,7 +59,7 @@ def main():
     correct_predictions = 0
     total_predictions = 0
 
-    if not test_sequences:
+    if len(test_sequences) == 0:
         print("No test sequences to evaluate.")
         return
 

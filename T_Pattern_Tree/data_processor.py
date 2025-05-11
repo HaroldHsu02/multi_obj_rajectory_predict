@@ -64,26 +64,35 @@ def load_and_transform_data(npy_filepath, rsu_map):
     # 从(num_timesteps, num_vehicles, 2)转换为(num_vehicles, num_timesteps, 2)
     vehicle_coord_trajectories = np.transpose(
         vehicle_coord_trajectories, (1, 0, 2))
-
+    # 打印转置后数组的形状
+    print(f"Transposed array shape: {vehicle_coord_trajectories.shape}")
+    # Transposed array shape: (453, 1202, 2)
     all_rsu_sequences = []
     for vehicle_coords in vehicle_coord_trajectories:
+        # vehicle_coords的形状为(1202, 2)
         rsu_sequence = []
         for coord_pair in vehicle_coords:
             if not isinstance(coord_pair, np.ndarray):
                 coord_pair = np.array(coord_pair)
-
             if np.isnan(coord_pair).any():
                 continue
 
             closest_rsu = get_closest_rsu(coord_pair, rsu_map)
             if closest_rsu:
                 if not rsu_sequence or rsu_sequence[-1] != closest_rsu:
+                    # 如果rsu_sequence为空，或者rsu_sequence的最后一个元素不等于closest_rsu，则将closest_rsu添加到rsu_sequence中
                     rsu_sequence.append(closest_rsu)
-
+        # 如果rsu_sequence的长度大于1，则将rsu_sequence添加到all_rsu_sequences中
         if len(rsu_sequence) > 1:
             all_rsu_sequences.append(rsu_sequence)
 
+    # 将all_rsu_sequences转换为numpy数组
+    all_rsu_sequences = np.array(all_rsu_sequences, dtype=object)
+
     print(f"Loaded and transformed {len(all_rsu_sequences)} RSU sequences.")
-    if all_rsu_sequences:
-        print(f"Example RSU sequence: {all_rsu_sequences[0][:10]}")
+    # 打印all_rsu_sequences的形状
+    print(f"RSU sequences shape: {all_rsu_sequences.shape}")
+
+    if all_rsu_sequences.size > 0:
+        print(f"Example RSU sequence: {all_rsu_sequences[0]}")
     return all_rsu_sequences

@@ -31,6 +31,7 @@ def get_closest_rsu(vehicle_coord, rsu_map_scaled):
 
 def split_data(all_trajectories, train_ratio=0.8):
     """Splits trajectories into training and testing sets."""
+    np.random.seed(1)
     np.random.shuffle(all_trajectories)  # Shuffle for random split
     split_idx = int(len(all_trajectories) * train_ratio)
     train_set = all_trajectories[:split_idx]

@@ -16,5 +16,9 @@ RSU_COORDS = {
 DATA_FILE_PATH = os.path.join(
     BASE_DIR, "Utils", "Datasets", "Datasets", "rome_trajectory.npy")
 
+# 转换后的RSU序列文件路径
+TRANSFORMED_DATA_PATH = os.path.join(
+    BASE_DIR, "Utils", "Datasets", "Datasets", "rsu_sequences.npy")
+
 # 训练集比例
 TRAIN_RATIO = 0.8

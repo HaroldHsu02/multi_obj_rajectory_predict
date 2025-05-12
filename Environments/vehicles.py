@@ -1,22 +1,26 @@
 import numpy as np
 from Environments.application import application
+from Environments.config import *
 
 
 class vehicle:
     def __init__(self, vehicle_index):
-        self.P = round(np.random.uniform(0.4, 0.6), 4)  # 车辆的发射功率
+        self.P = round(np.random.uniform(
+            VEHICLE_POWER_RANGE[0], VEHICLE_POWER_RANGE[1]), 4)  # 车辆的发射功率
         self.vehicle_index = vehicle_index  # 车辆的索引
-        self.application = application()# 初始化 TU 对应的应用
-        self.loc_data_path = './Utils/Datasets/Datasets/rome_trajectory_150_400.npy'  # 所有用户的轨迹
+        self.application = application()  # 初始化 TU 对应的应用
+        self.loc_data_path = VEHICLE_TRAJECTORY_PATH  # 所有用户的轨迹
         self.label_data = self.get_trajectory()
         # 为 TU 设置计算资源（单位 GHz），按照论文建议的范围 [2, 6]
-        self.cpu_power = np.random.uniform(2.0, 6.0)
+        self.cpu_power = np.random.uniform(
+            VEHICLE_CPU_POWER_RANGE[0], VEHICLE_CPU_POWER_RANGE[1])
         # 芯片相关常数（用于能耗计算），例如论文中 η 可取 1e-26
-        self.eta = 1e-26
+        self.eta = VEHICLE_ETA
 
         # 可选：存储 TU 当前任务执行状态或累计统计数据
         self.total_delay_local = 0.0
         self.total_energy_local = 0.0
+
     def get_trajectory(self):
         return np.load(self.loc_data_path)[:, self.vehicle_index]
 
@@ -75,4 +79,3 @@ class vehicle:
         offload_energy = upload_energy  # TU 端仅计算上传消耗能耗
 
         return offload_delay, offload_energy
-

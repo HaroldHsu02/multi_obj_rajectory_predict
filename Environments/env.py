@@ -6,6 +6,7 @@ import numpy as np
 from scipy.spatial import KDTree
 from Environments.cellular_node import cellular_node
 from Environments.vehicles import vehicle
+from Environments.config import *
 
 
 # 随机种子设置函数，设置后可复现结果
@@ -20,34 +21,43 @@ def seed_everything(seed):
 
 class Env:
     """此环境为方形环境，每台服务器的覆盖范围为正方形范围"""
-    Ground_Length = Ground_Width = 4000  # 场地的长宽均为2000米
-    cellular_number = 16  # 蜂窝基站数目
-    vehicle_number = 60  # 车辆数目
-    #migration_one_hop = 1.5  # 服务实例迁移一跳的时间
-    #backhaul_one_hop = 0.3  # 任务传输一跳的时间
-    #migration_prepare_time = 1.5  # 在目标服务器准备环境的时间
-    max_time_slot = 240
 
     def __init__(self):
-        seed_everything(1)  # 设置随机种子，保障可复现 3000
+        seed_everything(RANDOM_SEED)  # 设置随机种子，保障可复现
+        self.Ground_Length = GROUND_LENGTH
+        self.Ground_Width = GROUND_WIDTH
+        self.cellular_number = CELLULAR_NUMBER
+        self.vehicle_number = VEHICLE_NUMBER
+        self.max_time_slot = MAX_TIME_SLOT
+        self.migration_one_hop = MIGRATION_ONE_HOP
+        self.backhaul_one_hop = BACKHAUL_ONE_HOP
+        self.migration_prepare_time = MIGRATION_PREPARE_TIME
+
         self.cellular_list = self.get_cellulars()  # 获得蜂窝节点列表
         self.vehicle_list = self.get_vehicles()  # 获得车辆列表
-        self.cellular_locations = np.array([cel.cellular_loc for cel in self.cellular_list])  # 车辆位置
-        self.kdtree = KDTree(self.cellular_locations)  # 将所有基站的数据封装成kdtree,通过kdtree可查询到距离其最近的节点
-        self.loc_page = 3  # 位置偏移量
-        self.loc_init = 10  # 2
+        self.cellular_locations = np.array(
+            [cel.cellular_loc for cel in self.cellular_list])  # 车辆位置
+        # 将所有基站的数据封装成kdtree,通过kdtree可查询到距离其最近的节点
+        self.kdtree = KDTree(self.cellular_locations)
+        self.loc_page = LOC_PAGE  # 位置偏移量
+        self.loc_init = LOC_INIT  # 初始位置偏移
         self.state = None  # 环境初始状态为空
         self.time_slot = 0  # 系统运行到哪个时隙
-        self.cellular_computation_load = [0] * self.cellular_number  # 统计蜂窝节点在该时隙的计算负载
-        self.cellular_communication_load = [0] * self.cellular_number  # 统计蜂窝节点在该时隙的通信负载
+        self.cellular_computation_load = [
+            0] * self.cellular_number  # 统计蜂窝节点在该时隙的计算负载
+        self.cellular_communication_load = [
+            0] * self.cellular_number  # 统计蜂窝节点在该时隙的通信负载
         self.vehicle_this_belong = [-1] * self.vehicle_number  # 用户在该时隙属于哪个蜂窝站点
-        self.vehicle_distance_this_belong = [0] * self.vehicle_number  # 用户与距离其最近基站的距离
+        self.vehicle_distance_this_belong = [
+            0] * self.vehicle_number  # 用户与距离其最近基站的距离
 
     def get_cellulars(self):
-        return np.array([cellular_node(cel) for cel in range(self.cellular_number)])  # 传入的都是基站的编号
+        # 传入的都是基站的编号
+        return np.array([cellular_node(cel) for cel in range(self.cellular_number)])
 
     def get_vehicles(self):
-        return np.array([vehicle(vec) for vec in range(self.vehicle_number)])  # 传入的都是车辆的编号
+        # 传入的都是车辆的编号
+        return np.array([vehicle(vec) for vec in range(self.vehicle_number)])
 
     def get_state(self):
         state = []
@@ -59,7 +69,8 @@ class Env:
             state.append(vec.application.task[0])  # 任务数据量
             state.append(vec.application.task[1])  # 任务计算密度
             state.append(vec.application.instance)  # 服务实例数据大小
-            state.append(vec.application.instance_belong_cellular)  # 当前服务实例位于哪个基站
+            # 当前服务实例位于哪个基站
+            state.append(vec.application.instance_belong_cellular)
         self.state = np.array(state)
         return self.state
 
@@ -67,12 +78,14 @@ class Env:
         state = []
         for vec in self.vehicle_list:
             state.append(vec.label_data[self.loc_init + self.time_slot * self.loc_page][
-                             0] / self.Ground_Width)
+                0] / self.Ground_Width)
             state.append(vec.label_data[self.loc_init + self.time_slot * self.loc_page][
-                             1] / self.Ground_Width)
-            state.append((vec.application.task[0] - 4194304) / (12582912 - 4194304))
+                1] / self.Ground_Width)
+            state.append(
+                (vec.application.task[0] - 4194304) / (12582912 - 4194304))
             state.append((vec.application.task[1] - 200) / (1000 - 200))
-            state.append((vec.application.instance - 4194304) / (419430400 - 4194304))
+            state.append((vec.application.instance - 4194304) /
+                         (419430400 - 4194304))
             state.append(vec.application.instance_belong_cellular / 15)
         self.state = np.array(state)
         return self.state
@@ -120,9 +133,12 @@ class Env:
         for vec in self.vehicle_list:
             cellular_index, distance = self.belong_cellular(
                 vec.label_data[self.loc_init + time_slot * self.loc_page])
-            self.vehicle_this_belong[vec.vehicle_index] = cellular_index  # 车辆属于哪个基站
-            self.vehicle_distance_this_belong[vec.vehicle_index] = distance  # 车辆与基站之间的距离
-            self.cellular_communication_load[cellular_index] += 1  # 基站通信负载+1，按人数均分带宽
+            # 车辆属于哪个基站
+            self.vehicle_this_belong[vec.vehicle_index] = cellular_index
+            # 车辆与基站之间的距离
+            self.vehicle_distance_this_belong[vec.vehicle_index] = distance
+            # 基站通信负载+1，按人数均分带宽
+            self.cellular_communication_load[cellular_index] += 1
             # print(self.cellular_computation_load)
             # print(np.int64(np.int64(vec.application.task[0]) * np.int64(vec.application.task[1])))
             # print(vec.application.task[0])
@@ -156,7 +172,8 @@ class Env:
         bandwidth = (1 / self.cellular_communication_load[local_cellular]) * self.cellular_list[
             local_cellular].bandwidth
         # print("带宽:", bandwidth)
-        channel_gain = abs(self.cellular_list[local_cellular].channel_gain / length)
+        channel_gain = abs(
+            self.cellular_list[local_cellular].channel_gain / length)
         # print("信道增益:", channel_gain)
         trans_rate = bandwidth * math.log2(
             1 + vec.P * channel_gain / self.cellular_list[local_cellular].gaussian_noise)
@@ -168,8 +185,10 @@ class Env:
 
         """Step 4 ： 任务从本地基站通过回程链路传输到服务基站（前提条件：本地基站与服务基站不是一个基站）"""
         hop = 0  # 到目标服务器的条数
-        if local_cellular != action[vec.vehicle_index]:  # 代表是其他时隙，需要判断一下，服务实例位于哪个位置，然后转发
-            hop = self.manhattan_distance(local_cellular, action[vec.vehicle_index])
+        # 代表是其他时隙，需要判断一下，服务实例位于哪个位置，然后转发
+        if local_cellular != action[vec.vehicle_index]:
+            hop = self.manhattan_distance(
+                local_cellular, action[vec.vehicle_index])
             # _, hop_distance, _ = dijkstra(self.cellular_matrix, local_cellular)
             communication_time2_1 = vec.application.task[0] / self.cellular_list[
                 local_cellular].backhaul_network
@@ -192,11 +211,12 @@ class Env:
         # print("------------------------------------->车辆", vec.vehicle_index, "进入了computation函数")
         # print("所有蜂窝节点的计算负载：", self.cellular_computation_load)
         """Step1 : 目标action基站给用户分配了多少计算资源"""
-        compute_vol = np.int64(vec.application.task[0]) * np.int64(vec.application.task[1])  # 计算量
+        compute_vol = np.int64(
+            vec.application.task[0]) * np.int64(vec.application.task[1])  # 计算量
         ac = action[vec.vehicle_index]  # 在哪里计算
 
         capability = (np.sqrt(compute_vol) / self.cellular_computation_load[ac]) * \
-                     self.cellular_list[ac].capability
+            self.cellular_list[ac].capability
         # print("目标计算基站：", action[vec.vehicle_index])
         # print("分配的计算能力：", capability)
         computation_time = compute_vol / capability
@@ -215,7 +235,8 @@ class Env:
 
         # s, hop_distance, _ = dijkstra(self.cellular_matrix, ins_belong)
         hop = self.manhattan_distance(ins_belong, ac)
-        migration_time1 = vec.application.instance / self.cellular_list[ins_belong].backhaul_network
+        migration_time1 = vec.application.instance / \
+            self.cellular_list[ins_belong].backhaul_network
         migration_time2 = hop * self.migration_one_hop
 
         # print("服务实例数据：", vec.application.instance)
@@ -247,10 +268,11 @@ class Env:
 
                 comm_time1, comm_time2_1, comm_time2_2, local_cellular, comm_hop = (
                     self.communication_time(
-                    vec, action))  # 进入通信函数
+                        vec, action))  # 进入通信函数
                 comm_time = comm_time1 + comm_time2_1 + comm_time2_2  # 全部通信时间
 
-                comp_time, capability = self.computation_time(vec, action)  # 进入计算函数计算
+                comp_time, capability = self.computation_time(
+                    vec, action)  # 进入计算函数计算
                 # print("用户", vec.vehicle_index, "通信时间1：", comm_time2_1, "通信时间2：", comm_time2_2,
                 # "计算时间：", comp_time, "频率", capability)
 
@@ -258,10 +280,11 @@ class Env:
                 """服务实例上一时隙所在的服务器与新的动作指向的是同一个服务器，不进行迁移"""
                 comm_time1, comm_time2_1, comm_time2_2, local_cellular, comm_hop = (
                     self.communication_time(
-                    vec, action))  # 进入通信函数
+                        vec, action))  # 进入通信函数
                 comm_time = comm_time1 + comm_time2_1 + comm_time2_2  # 全部通信时间
 
-                comp_time, capability = self.computation_time(vec, action)  # 进入计算函数计算
+                comp_time, capability = self.computation_time(
+                    vec, action)  # 进入计算函数计算
                 # print("用户", vec.vehicle_index, "通信时间1：", comm_time2_1, "通信时间2：", comm_time2_2,
                 # "计算时间：", comp_time, "频率", capability)
 
@@ -269,16 +292,19 @@ class Env:
                 """服务实例上一时隙所在的服务器与新的动作指向的不是同一个服务器，应当进行迁移，迁移到action处"""
                 if self.cellular_list[ac].server_app == 0:
                     mig_prepare_time = self.migration_prepare_time
-                mig_time1, mig_time2, mig_hop = self.migration_time(vec, action)  # 进入迁移函数
+                mig_time1, mig_time2, mig_hop = self.migration_time(
+                    vec, action)  # 进入迁移函数
                 # print("目标环境准备时间：", mig_prepare_time)
-                mig_time = max(mig_time1 + mig_time2, mig_prepare_time)  # 全部迁移时间,取迁移时间和环境准备时间最大的那一个
+                # 全部迁移时间,取迁移时间和环境准备时间最大的那一个
+                mig_time = max(mig_time1 + mig_time2, mig_prepare_time)
 
                 comm_time1, comm_time2_1, comm_time2_2, local_cellular, comm_hop = (
                     self.communication_time(
-                    vec, action))  # 进入通信函数
+                        vec, action))  # 进入通信函数
                 comm_time = comm_time1 + comm_time2_1 + comm_time2_2  # 全部通信时间
 
-                comp_time, capability = self.computation_time(vec, action)  # 进入计算函数
+                comp_time, capability = self.computation_time(
+                    vec, action)  # 进入计算函数
                 # print("用户", vec.vehicle_index, "通信时间1：", comm_time2_1, "通信时间2：", comm_time2_2,
                 # "计算时间：", comp_time, "频率", capability, "迁移时间：",mig_time1)
 

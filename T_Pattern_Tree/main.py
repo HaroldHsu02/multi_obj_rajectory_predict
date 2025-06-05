@@ -108,11 +108,11 @@ def main(force_transform=False):
     else:
         print("\nNo predictions could be made on the test set.")
 
-
+ 
 if __name__ == "__main__":
     # 默认使用已转换的数据（如果存在）
     # 如需强制重新执行转换，可以设置force_transform=True
-    force_transform = False
+    force_transform = True
 
     # 解析命令行参数
     if len(sys.argv) > 1 and sys.argv[1].lower() == "force":

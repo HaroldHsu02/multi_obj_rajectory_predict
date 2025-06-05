@@ -1,8 +1,14 @@
+from Datasets.File_operation import FileOperation
+import sys
 import os
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
-from Utils.File_operation import FileOperation
+
+# 添加项目根目录到Python路径
+sys.path.append(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+
+# 在添加路径后导入
 
 
 def create_directory(path: str, sub_path_list: list):
@@ -35,7 +41,8 @@ def scale_action(action, low, high):
 
 
 def save_result(dataset, flag, MEC, UE):
-    filepath = FileOperation.get_BASE_DIR() + "/Result" + "/" + str(flag) + "_" + str(MEC) + "_" + str(UE)  # 获取存储路径
+    filepath = FileOperation.get_BASE_DIR() + "/Result" + "/" + str(flag) + \
+        "_" + str(MEC) + "_" + str(UE)  # 获取存储路径
     np.save(filepath, dataset)  # 保存为npy文件
     print("单次奖励保存成功")
 

@@ -24,17 +24,18 @@ class Env:
 
     def __init__(self):
         seed_everything(RANDOM_SEED)  # 设置随机种子，保障可复现
-        self.Ground_Length = GROUND_LENGTH
-        self.Ground_Width = GROUND_WIDTH
-        self.cellular_number = CELLULAR_NUMBER
-        self.vehicle_number = VEHICLE_NUMBER
-        self.max_time_slot = MAX_TIME_SLOT
-        self.migration_one_hop = MIGRATION_ONE_HOP
+        self.Ground_Length = GROUND_LENGTH  # 场地长度
+        self.Ground_Width = GROUND_WIDTH  # 场地宽度
+        self.cellular_number = CELLULAR_NUMBER  # 蜂窝基站数量
+        self.vehicle_number = VEHICLE_NUMBER  # 车辆数量
+        self.max_time_slot = MAX_TIME_SLOT  # 最大时隙数
+        self.migration_one_hop = MIGRATION_ONE_HOP  # 迁移跳数
         self.backhaul_one_hop = BACKHAUL_ONE_HOP
-        self.migration_prepare_time = MIGRATION_PREPARE_TIME
+        self.migration_prepare_time = MIGRATION_PREPARE_TIME  # 迁移准备时间
+        self.cellular_list = self.get_cellulars()  # 获得蜂窝节点列表（坐标列表）
 
-        self.cellular_list = self.get_cellulars()  # 获得蜂窝节点列表
         self.vehicle_list = self.get_vehicles()  # 获得车辆列表
+        
         self.cellular_locations = np.array(
             [cel.cellular_loc for cel in self.cellular_list])  # 车辆位置
         # 将所有基站的数据封装成kdtree,通过kdtree可查询到距离其最近的节点
@@ -53,6 +54,7 @@ class Env:
 
     def get_cellulars(self):
         # 传入的都是基站的编号
+        # 返回的是蜂窝基站的
         return np.array([cellular_node(cel) for cel in range(self.cellular_number)])
 
     def get_vehicles(self):
@@ -358,7 +360,8 @@ class Env:
                 vec.vehicle_index]  # 车辆的服务所在的边缘服务器
         return self.get_state_normalize(), reward, vec_result, done
 
-# env = Env()
+
+env = Env()
 # i = 0
 # ep_reward = 0
 # print("********************************************************时隙", i,

@@ -1,20 +1,22 @@
-import numpy as np
+from Environments.config import CELLULAR_LOCATIONS
 import os
+import sys
+import numpy as np
 
-# 获取项目根目录的绝对路径
+# 添加项目根目录到Python路径
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(BASE_DIR)
+
+# 从Environments导入配置
 
 # RSU坐标配置
 RSU_COORDS = {
-    "RSU_0": np.array([375.0, 375.0]),
-    "RSU_1": np.array([1125.0, 375.0]),
-    "RSU_2": np.array([375.0, 1125.0]),
-    "RSU_3": np.array([1125.0, 1125.0]),
+    f"RSU_{i}": np.array(loc) for i, loc in enumerate(CELLULAR_LOCATIONS)
 }
 
 # 数据文件路径
 DATA_FILE_PATH = os.path.join(
-    BASE_DIR, "Utils", "Datasets", "Datasets", "rome_trajectory.npy")
+    BASE_DIR,  "Datasets", "Datasets", "rome_trajectory.npy")
 
 # 转换后的RSU序列文件路径
 TRANSFORMED_DATA_PATH = os.path.join(

@@ -1,3 +1,11 @@
+'''
+Author: HaroldHsu02 88320487+HaroldHsu02@users.noreply.github.com
+Date: 2025-05-07 20:17:27
+LastEditors: HaroldHsu02 88320487+HaroldHsu02@users.noreply.github.com
+LastEditTime: 2025-06-05 14:18:19
+FilePath: \multi_obj\T_Pattern_Tree\predictor.py
+Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+'''
 import os
 import sys
 
@@ -70,7 +78,7 @@ def predict_next_rsu(tree_root, history_rsu_sequence):
 
     if not all_predicted_paths:
         return None
-
+  
     candidate_predictions = {}  # RSU_key -> total_support
     for path in all_predicted_paths:
         if path:

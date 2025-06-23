@@ -1,4 +1,13 @@
+'''
+Author: HaroldHsu02 88320487+HaroldHsu02@users.noreply.github.com
+Date: 2025-04-11 21:47:25
+LastEditors: HaroldHsu02 88320487+HaroldHsu02@users.noreply.github.com
+LastEditTime: 2025-06-23 10:15:01
+FilePath: \multi_obj\generate_directory_tree.py
+Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+'''
 import os
+
 
 def generate_tree(directory, prefix=""):
     """
@@ -26,11 +35,11 @@ def generate_tree(directory, prefix=""):
         else:
             print(f"{prefix}├── {entry}")
             new_prefix = prefix + "│   "
-            
 
         # 如果是文件夹，则递归遍历其内容
         if os.path.isdir(path):
             generate_tree(path, new_prefix)
+
 
 def main():
     # 获取用户输入的目标目录
@@ -46,7 +55,6 @@ def main():
     generate_tree(target_directory)
     print("树状结构生成完成")
 
-
     # # 将输出保存到文件
     # output_file = "directory_tree.txt"
     # with open(output_file, "w", encoding="utf-8") as f:
@@ -55,5 +63,6 @@ def main():
 
     # print(f"树状结构已保存到 {output_file}")
 
+
 if __name__ == "__main__":
-    main()  
+    main()

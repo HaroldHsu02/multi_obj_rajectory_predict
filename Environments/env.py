@@ -4,9 +4,9 @@ import random
 import torch
 import numpy as np
 from scipy.spatial import KDTree
-from Environments.cellular_node import cellular_node
-from Environments.vehicles import vehicle
-from Environments.config import *
+from cellular_node import cellular_node
+from vehicles import vehicle
+from config import *
 
 
 # 随机种子设置函数，设置后可复现结果
@@ -20,37 +20,76 @@ def seed_everything(seed):
 
 
 class Env:
-    """此环境为方形环境，每台服务器的覆盖范围为正方形范围"""
+    """
+    车联网环境类,模拟车辆和基站之间的交互。
+
+    属性:
+        Ground_Length (int): 场地长度(米)
+        Ground_Width (int): 场地宽度(米) 
+        cellular_number (int): 蜂窝基站数量
+        vehicle_number (int): 车辆数量
+        max_time_slot (int): 最大时隙数
+        migration_one_hop (float): 服务实例迁移一跳的时间
+        backhaul_one_hop (float): 任务传输一跳的时间
+        migration_prepare_time (float): 在目标服务器准备环境的时间
+        cellular_list (list): 蜂窝基站对象列表
+        vehicle_list (list): 车辆对象列表
+        cellular_locations (ndarray): 所有基站的位置坐标
+        kdtree (KDTree): 用于快速查找最近基站的KD树
+        loc_page (int): 位置偏移量,用于轨迹数据采样
+        loc_init (int): 初始位置偏移
+        state (ndarray): 当前环境状态
+        time_slot (int): 当前时隙
+        cellular_computation_load (list): 各基站当前时隙的计算负载
+        cellular_communication_load (list): 各基站当前时隙的通信负载
+        vehicle_this_belong (list): 记录每个车辆当前所属的基站编号
+        vehicle_distance_this_belong (list): 记录每个车辆到其所属基站的距离
+    """
 
     def __init__(self):
-        seed_everything(RANDOM_SEED)  # 设置随机种子，保障可复现
-        self.Ground_Length = GROUND_LENGTH  # 场地长度
-        self.Ground_Width = GROUND_WIDTH  # 场地宽度
-        self.cellular_number = CELLULAR_NUMBER  # 蜂窝基站数量
-        self.vehicle_number = VEHICLE_NUMBER  # 车辆数量
-        self.max_time_slot = MAX_TIME_SLOT  # 最大时隙数
-        self.migration_one_hop = MIGRATION_ONE_HOP  # 迁移跳数
-        self.backhaul_one_hop = BACKHAUL_ONE_HOP
-        self.migration_prepare_time = MIGRATION_PREPARE_TIME  # 迁移准备时间
-        self.cellular_list = self.get_cellulars()  # 获得蜂窝节点列表（坐标列表）
+        # 设置随机种子,保证实验可复现
+        seed_everything(RANDOM_SEED)
 
-        self.vehicle_list = self.get_vehicles()  # 获得车辆列表
-        
+        # 初始化环境基本参数
+        self.Ground_Length = GROUND_LENGTH
+        self.Ground_Width = GROUND_WIDTH
+        self.cellular_number = CELLULAR_NUMBER
+        self.vehicle_number = VEHICLE_NUMBER
+        self.max_time_slot = MAX_TIME_SLOT
+
+        # 初始化迁移相关参数
+        self.migration_one_hop = MIGRATION_ONE_HOP
+        self.backhaul_one_hop = BACKHAUL_ONE_HOP
+        self.migration_prepare_time = MIGRATION_PREPARE_TIME
+
+        # 初始化基站和车辆
+        self.cellular_list = self.get_cellulars()
+        self.vehicle_list = self.get_vehicles()
+
+        # 构建KD树用于快速查找最近基站
+        # 将基站位置列表转换为numpy数组,用于构建KD树
+        # 使用列表推导式从cellular_list中提取每个基站的位置坐标
         self.cellular_locations = np.array(
-            [cel.cellular_loc for cel in self.cellular_list])  # 车辆位置
-        # 将所有基站的数据封装成kdtree,通过kdtree可查询到距离其最近的节点
+            [cel.cellular_loc for cel in self.cellular_list])
+        
+        # 使用基站位置坐标构建KD树,用于快速查找最近邻基站
+        # KDTree是一种空间数据结构,可以高效地进行最近邻搜索
         self.kdtree = KDTree(self.cellular_locations)
-        self.loc_page = LOC_PAGE  # 位置偏移量
-        self.loc_init = LOC_INIT  # 初始位置偏移
-        self.state = None  # 环境初始状态为空
-        self.time_slot = 0  # 系统运行到哪个时隙
-        self.cellular_computation_load = [
-            0] * self.cellular_number  # 统计蜂窝节点在该时隙的计算负载
-        self.cellular_communication_load = [
-            0] * self.cellular_number  # 统计蜂窝节点在该时隙的通信负载
-        self.vehicle_this_belong = [-1] * self.vehicle_number  # 用户在该时隙属于哪个蜂窝站点
+
+        # 初始化位置相关参数
+        self.loc_page = LOC_PAGE
+        self.loc_init = LOC_INIT
+
+        # 初始化状态和时隙
+        self.state = None
+        self.time_slot = 0
+
+        # 初始化负载统计数组
+        self.cellular_computation_load = [0] * self.cellular_number  # 计算负载
+        self.cellular_communication_load = [0] * self.cellular_number  # 通信负载
+        self.vehicle_this_belong = [-1] * self.vehicle_number  # 车辆所属基站
         self.vehicle_distance_this_belong = [
-            0] * self.vehicle_number  # 用户与距离其最近基站的距离
+            0] * self.vehicle_number  # 车辆到基站距离
 
     def get_cellulars(self):
         # 传入的都是基站的编号
@@ -58,7 +97,21 @@ class Env:
         return np.array([cellular_node(cel) for cel in range(self.cellular_number)])
 
     def get_vehicles(self):
+        """
+        获取车辆列表
+
+        根据配置的车辆数量(self.vehicle_number)生成对应数量的车辆对象。
+        每个车辆对象通过vehicle类初始化,传入车辆编号作为标识。
+
+        Returns:
+            np.array: 包含所有车辆对象的numpy数组
+        """
         # 传入的都是车辆的编号
+        # 根据配置的车辆数量生成车辆对象列表
+        # 1. 遍历从0到self.vehicle_number-1的车辆编号
+        # 2. 对每个编号vec创建一个vehicle对象,传入编号作为标识
+        # 3. 使用列表推导式生成所有车辆对象
+        # 4. 最后转换为numpy数组返回
         return np.array([vehicle(vec) for vec in range(self.vehicle_number)])
 
     def get_state(self):
@@ -77,17 +130,32 @@ class Env:
         return self.state
 
     def get_state_normalize(self):
+        """
+        获取标准化后的环境状态。
+
+        对每个车辆的状态信息进行归一化处理,包括:
+        1. 车辆位置坐标(x,y) - 除以地图宽度进行归一化到[0,1]区间
+        2. 任务数据量 - 线性归一化到[0,1]区间,原始范围[4194304, 12582912]字节
+        3. 任务计算密度 - 线性归一化到[0,1]区间,原始范围[200, 1000]每字节所需CPU周期
+        4. 服务实例大小 - 线性归一化到[0,1]区间,原始范围[4194304, 419430400]字节
+        5. 服务实例所属基站 - 除以基站总数(15)归一化到[0,1]区间
+
+        Returns:
+            np.array: 归一化后的状态向量
+        """
         state = []
         for vec in self.vehicle_list:
             state.append(vec.label_data[self.loc_init + self.time_slot * self.loc_page][
-                0] / self.Ground_Width)
+                0] / self.Ground_Width)  # 归一化X坐标
             state.append(vec.label_data[self.loc_init + self.time_slot * self.loc_page][
-                1] / self.Ground_Width)
+                1] / self.Ground_Width)  # 归一化Y坐标
             state.append(
-                (vec.application.task[0] - 4194304) / (12582912 - 4194304))
+                (vec.application.task[0] - 4194304) / (12582912 - 4194304))  # 归一化任务数据量
+            # 归一化任务计算密度
             state.append((vec.application.task[1] - 200) / (1000 - 200))
             state.append((vec.application.instance - 4194304) /
-                         (419430400 - 4194304))
+                         (419430400 - 4194304))  # 归一化服务实例大小
+            # 归一化所属基站编号
             state.append(vec.application.instance_belong_cellular / 15)
         self.state = np.array(state)
         return self.state
@@ -361,7 +429,7 @@ class Env:
         return self.get_state_normalize(), reward, vec_result, done
 
 
-env = Env()
+# env = Env()
 # i = 0
 # ep_reward = 0
 # print("********************************************************时隙", i,

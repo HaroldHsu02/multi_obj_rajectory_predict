@@ -1,5 +1,13 @@
+'''
+Author: HaroldHsu02 88320487+HaroldHsu02@users.noreply.github.com
+Date: 2025-04-11 15:45:20
+LastEditors: HaroldHsu02 88320487+HaroldHsu02@users.noreply.github.com
+LastEditTime: 2025-06-24 11:25:15
+FilePath: \multi_obj\Environments\cellular_node.py
+Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+'''
 import numpy as np
-from Environments.config import *
+from config import *
 
 
 class cellular_node:

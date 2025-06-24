@@ -1,3 +1,11 @@
+'''
+Author: HaroldHsu02 88320487+HaroldHsu02@users.noreply.github.com
+Date: 2025-05-12 19:47:30
+LastEditors: HaroldHsu02 88320487+HaroldHsu02@users.noreply.github.com
+LastEditTime: 2025-06-24 10:49:10
+FilePath: \multi_obj\Environments\config.py
+Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+'''
 import numpy as np
 import os
 
@@ -6,28 +14,26 @@ BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 
 # ============== 环境参数 ==============
 # 场地参数
-GROUND_LENGTH = 4000  # 场地长度（米）
-GROUND_WIDTH = 4000   # 场地宽度（米）
+GROUND_LENGTH = 2000  # 场地长度（米）
+GROUND_WIDTH = 2000   # 场地宽度（米）
 
 # 模拟参数
 MAX_TIME_SLOT = 240   # 最大时隙数
 RANDOM_SEED = 1       # 随机种子
 
 # ============== 蜂窝基站参数 ==============
-CELLULAR_NUMBER = 16  # 蜂窝基站数目
-CELLULAR_RADIUS = 500  # 蜂窝网络半径（米）
+CELLULAR_NUMBER = 4  # 蜂窝基站数目
+CELLULAR_RADIUS = 1000  # 蜂窝网络半径（米）
 CELLULAR_CAPABILITY = 60e9  # 计算能力（Hz）
-CELLULAR_BANDWIDTH = 20e6  # 带宽（Hz）
+CELLULAR_BANDWIDTH = 10e6  # 带宽（Hz）
 CELLULAR_BACKHAUL_NETWORK = 500e6  # 回程链路带宽（bps）
 CELLULAR_CHANNEL_GAIN = 1e-5  # 距离1m时的参考信道增益
 CELLULAR_GAUSSIAN_NOISE = 1e-13  # 信道中的高斯白噪声
 
-# 蜂窝基站位置坐标（形成4×4网格布局）
+# 蜂窝基站位置坐标（形成2*2网格布局）
 CELLULAR_LOCATIONS = np.array([
-    [500, 500], [1500, 500], [2500, 500], [3500, 500],
-    [500, 1500], [1500, 1500], [2500, 1500], [3500, 1500],
-    [500, 2500], [1500, 2500], [2500, 2500], [3500, 2500],
-    [500, 3500], [1500, 3500], [2500, 3500], [3500, 3500]
+    [500, 500], [1500, 500],
+    [500, 1500], [1500, 1500]
 ])
 
 # ============== 车辆参数 ==============

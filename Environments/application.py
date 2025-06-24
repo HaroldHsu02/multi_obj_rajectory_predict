@@ -1,5 +1,5 @@
 import numpy as np
-from Environments.config import *
+from config import *
 
 
 class application:

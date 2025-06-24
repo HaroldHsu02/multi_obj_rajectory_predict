@@ -115,17 +115,36 @@ class Env:
         return np.array([vehicle(vec) for vec in range(self.vehicle_number)])
 
     def get_state(self):
+        """
+        获取环境当前状态。
+        
+        对每个车辆收集以下状态信息:
+        1. 车辆当前位置坐标(x,y) - 从车辆轨迹数据中获取
+        2. 任务相关参数:
+           - 任务数据量(字节)
+           - 任务计算密度(每字节所需CPU周期数) 
+           - 服务实例大小(字节)
+           - 服务实例所在基站编号
+        
+        Returns:
+            np.array: 包含所有车辆状态信息的状态向量
+        """
         state = []
         for vec in self.vehicle_list:
+            # 获取车辆当前位置坐标
+            # 根据初始位置(loc_init)、当前时隙(time_slot)和每页位置数(loc_page)计算当前位置索引
             state.append(
                 vec.label_data[self.loc_init + self.time_slot * self.loc_page][0])  # 车辆坐标 X轴
             state.append(
                 vec.label_data[self.loc_init + self.time_slot * self.loc_page][1])  # 车辆坐标 Y轴
+            
+            # 获取任务相关参数
             state.append(vec.application.task[0])  # 任务数据量
             state.append(vec.application.task[1])  # 任务计算密度
             state.append(vec.application.instance)  # 服务实例数据大小
-            # 当前服务实例位于哪个基站
-            state.append(vec.application.instance_belong_cellular)
+            state.append(vec.application.instance_belong_cellular)  # 服务实例所在基站编号
+            
+        # 将状态列表转换为numpy数组并保存
         self.state = np.array(state)
         return self.state
 

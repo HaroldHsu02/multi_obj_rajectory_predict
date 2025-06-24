@@ -2,7 +2,7 @@
 Author: HaroldHsu02 88320487+HaroldHsu02@users.noreply.github.com
 Date: 2025-05-12 19:47:30
 LastEditors: HaroldHsu02 88320487+HaroldHsu02@users.noreply.github.com
-LastEditTime: 2025-06-24 10:49:10
+LastEditTime: 2025-06-24 17:33:36
 FilePath: \multi_obj\Environments\config.py
 Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 '''
@@ -56,7 +56,7 @@ TASK_OUTPUT_SIZE_RANGE = [500 * 1024, 800 * 1024]  # 输出数据量范围 [500K
 MIGRATION_ONE_HOP = 1.5  # 服务实例迁移一跳的时间
 BACKHAUL_ONE_HOP = 0.3  # 任务传输一跳的时间
 MIGRATION_PREPARE_TIME = 1.5  # 在目标服务器准备环境的时间
-
+            
 # ============== 状态空间参数 ==============
-LOC_PAGE = 3  # 位置偏移量
-LOC_INIT = 10  # 初始位置偏移
+LOC_PAGE = 3  # 每个时隙采样的轨迹点间隔,用于控制轨迹数据采样频率
+LOC_INIT = 10  # 轨迹起始位置的偏移量,用于跳过轨迹前面的一些数据点

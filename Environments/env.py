@@ -62,10 +62,8 @@ class Env:
         self.vehicle_number = VEHICLE_NUMBER
         self.max_time_slot = MAX_TIME_SLOT
 
-        # 初始化迁移相关参数
-        self.migration_one_hop = MIGRATION_ONE_HOP
+        # 初始化传输相关参数
         self.backhaul_one_hop = BACKHAUL_ONE_HOP
-        self.migration_prepare_time = MIGRATION_PREPARE_TIME
 
         # 初始化基站和车辆
         self.cellular_list = self.get_cellulars()
@@ -145,11 +143,9 @@ class Env:
                 vec.label_data[self.loc_init + self.time_slot * self.loc_page][1])  # 车辆坐标 Y轴
 
             # 获取任务相关参数
-            state.append(vec.application.task[0])  # 任务数据量
-            state.append(vec.application.task[1])  # 任务计算密度
+            state.append(vec.application.get_task_size())  # 任务数据量
+            state.append(vec.application.get_task_density())  # 任务计算密度
             state.append(vec.application.instance)  # 服务实例数据大小
-            # 服务实例所在基站编号
-            state.append(vec.application.instance_belong_cellular)
 
         # 将状态列表转换为numpy数组并保存
         self.state = np.array(state)
@@ -176,9 +172,10 @@ class Env:
             state.append(vec.label_data[self.loc_init + self.time_slot * self.loc_page][
                 1] / self.Ground_Width)  # 归一化Y坐标
             state.append(
-                (vec.application.task[0] - 4194304) / (12582912 - 4194304))  # 归一化任务数据量
+                (vec.application.get_task_size() - 4194304) / (12582912 - 4194304))  # 归一化任务数据量
             # 归一化任务计算密度
-            state.append((vec.application.task[1] - 200) / (1000 - 200))
+            state.append(
+                (vec.application.get_task_density() - 200) / (1000 - 200))
             state.append((vec.application.instance - 4194304) /
                          (419430400 - 4194304))  # 归一化服务实例大小
             # 归一化所属基站编号
@@ -258,14 +255,16 @@ class Env:
             # 基站通信负载+1，按人数均分带宽
             self.cellular_communication_load[cellular_index] += 1
 
-            if action is None:  # 如果action为None，则代表是第一个时隙，此时应该根据车辆的位置统计负载
-                self.cellular_computation_load[cellular_index] += np.sqrt(np.int64(
-                    np.int64(vec.application.task[0]) * np.int64(
-                        vec.application.task[1])))  # 统计负载，到时候先按加权分配
-            else:  # action不为空，根据action统计负载
-                self.cellular_computation_load[action[vec.vehicle_index]] += np.sqrt(np.int64(
-                    np.int64(vec.application.task[0]) * np.int64(
-                        vec.application.task[1])))  # 统计负载，到时候先按加权分配
+            # 只有当车辆有任务时才计算负载
+            if vec.application.has_task():
+                if action is None:  # 如果action为None，则代表是第一个时隙，此时应该根据车辆的位置统计负载
+                    self.cellular_computation_load[cellular_index] += np.sqrt(np.int64(
+                        np.int64(vec.application.get_task_size()) * np.int64(
+                            vec.application.get_task_density())))  # 统计负载，到时候先按加权分配
+                else:  # action不为空，根据action统计负载
+                    self.cellular_computation_load[action[vec.vehicle_index]] += np.sqrt(np.int64(
+                        np.int64(vec.application.get_task_size()) * np.int64(
+                            vec.application.get_task_density())))  # 统计负载，到时候先按加权分配
 
     def communication_time(self, vec, action):
         """
@@ -278,6 +277,10 @@ class Env:
         Returns:
             tuple: (本地通信时间, 回程传输时间1, 回程传输时间2, 本地基站编号, 跳数)
         """
+        # 检查是否有任务
+        if not vec.application.has_task():
+            return 0.0, 0.0, 0.0, -1, 0
+
         # Step 1: 得出本地基站的位置以及二者之间的距离
         local_cellular = self.vehicle_this_belong[vec.vehicle_index]  # 本地基站的编号
         # 直接计算距离，不用开根号（方便后面的计算）
@@ -292,7 +295,7 @@ class Env:
             1 + vec.P * channel_gain / self.cellular_list[local_cellular].gaussian_noise)
 
         # Step 3: 用户将任务传输到本地基站
-        communication_time1 = vec.application.task[0] / trans_rate
+        communication_time1 = vec.application.get_task_size() / trans_rate
 
         # Step 4: 任务从本地基站通过回程链路传输到服务基站（前提条件：本地基站与服务基站不是一个基站）
         hop = 0  # 到目标服务器的跳数
@@ -300,7 +303,7 @@ class Env:
         if local_cellular != action[vec.vehicle_index]:
             hop = self.manhattan_distance(
                 local_cellular, action[vec.vehicle_index])
-            communication_time2_1 = vec.application.task[0] / self.cellular_list[
+            communication_time2_1 = vec.application.get_task_size() / self.cellular_list[
                 local_cellular].backhaul_network
             communication_time2_2 = self.backhaul_one_hop * hop
         else:  # 服务实例就位于本地基站位置，不需要转发
@@ -322,9 +325,13 @@ class Env:
         Returns:
             tuple: (计算时间, 分配的计算能力)
         """
+        # 检查是否有任务
+        if not vec.application.has_task():
+            return 0.0, 0.0
+
         # Step1: 目标action基站给用户分配了多少计算资源
         compute_vol = np.int64(
-            vec.application.task[0]) * np.int64(vec.application.task[1])  # 计算量
+            vec.application.get_task_size()) * np.int64(vec.application.get_task_density())  # 计算量
         ac = action[vec.vehicle_index]  # 在哪里计算
 
         capability = (np.sqrt(compute_vol) / self.cellular_computation_load[ac]) * \

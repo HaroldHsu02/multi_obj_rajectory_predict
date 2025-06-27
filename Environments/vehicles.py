@@ -7,8 +7,15 @@ FilePath: \multi_obj\Environments\vehicles.py
 Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 '''
 import numpy as np
-from application import application
-from config import *
+import os
+import sys
+
+# 添加项目根目录到Python路径
+BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+sys.path.append(BASE_DIR)
+
+from Environments.application import application
+from Environments.config import *
 
 
 class vehicle:
@@ -72,20 +79,20 @@ class vehicle:
         """
         return self.label_data[time_slot]
 
-    def compute_local_task(self, task):
+    def compute_local_task(self):
         """
         模拟 TU 本地执行任务。
-        参数：
-            task: 字典类型，包含以下键：
-                'i': 输入数据量（字节）
-                'density': 计算密度（单位：CPU周期/字节）
-                'u': 任务需要的 CPU 周期数 (通常 u = i * density)
-                'o': 输出数据量（字节）
+        使用application中的当前任务进行计算。
         返回：
             local_delay: 本地执行延时，根据公式 delay = u / cpu_power  （公式 (7)）
             local_energy: 本地执行能耗，根据公式 energy = η * u * (cpu_power)^2  （公式 (8)）
         """
-        u = task['numberOfCycles']
+        # 检查是否有任务
+        if not self.application.has_task():
+            return 0.0, 0.0
+        
+        # 获取任务所需CPU周期数
+        u = self.application.get_task_cycles()
         local_delay = u / self.cpu_power
         local_energy = self.eta * u * (self.cpu_power ** 2)
         # 更新累计统计信息
@@ -93,7 +100,7 @@ class vehicle:
         self.total_energy_local += local_energy
         return local_delay, local_energy
 
-    def offload_task(self, task, channel_rate):
+    def offload_task(self, channel_rate):
         """
         模拟任务卸载到 RSU 端执行，计算任务卸载过程的延时和能耗。
         卸载过程包括三个部分：
@@ -102,23 +109,33 @@ class vehicle:
                其中 edge_cpu_power 假定足够大，本例中可以采用一个常数（例如 10 GHz）；
             3. 下行传输延时：下载时间 = 输出数据量 / channel_rate
         参数：
-            task: 同 compute_local_task 中的任务参数字典。
             channel_rate: 信道上行/下行传输速率（单位：字节/秒），实际应根据无线信道模型计算。
 
         返回：
             offload_delay: 总延时 = 上传时间 + RSU 执行时间 + 下行时间
             offload_energy: 总能耗 = 上传能耗（本例中仅考虑 TU 上传能耗）
         """
+        # 检查是否有任务
+        if not self.application.has_task():
+            return 0.0, 0.0
+        
+        # 获取任务参数
+        input_size = self.application.get_task_size()
+        cpu_cycles = self.application.get_task_cycles()
+        
+        # 假设输出数据量为输入数据量的10%
+        output_size = int(input_size * 0.1)
+        
         # 上行传输：上传时间
-        upload_time = task['i'] / channel_rate
+        upload_time = input_size / channel_rate
         upload_energy = self.P * upload_time
 
-        # UAV 端执行延时（假设 UAV 边缘服务器的计算能力较高，这里采用常数模拟，例如 10 GHz）
+        # RSU 端执行延时（假设 RSU 边缘服务器的计算能力较高，这里采用常数模拟，例如 10 GHz）
         edge_cpu_power = 10.0  # 假设值，单位 GHz
-        execution_time = task['u'] / edge_cpu_power
+        execution_time = cpu_cycles / edge_cpu_power
 
         # 下行传输：下载时间（采用与上行相同的速率）
-        download_time = task['o'] / channel_rate
+        download_time = output_size / channel_rate
 
         offload_delay = upload_time + execution_time + download_time
         offload_energy = upload_energy  # TU 端仅计算上传消耗能耗

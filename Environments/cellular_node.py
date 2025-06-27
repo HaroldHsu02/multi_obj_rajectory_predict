@@ -23,7 +23,6 @@ class cellular_node:
         self.gaussian_noise = CELLULAR_GAUSSIAN_NOISE  # 信道中的高斯白噪声
         self.cellular_loc_array = CELLULAR_LOCATIONS  # 蜂窝基站位置坐标数组
         self.cellular_loc = self.get_cellular_loc()  # 根据基站索引获取物理坐标
-        self.server_app = 0  # 初始化服务应用数量为 0
 
     def get_cellular_loc(self):
         """

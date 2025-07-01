@@ -11,9 +11,6 @@ sys.path.append(BASE_DIR)
 class application:
     """应用参数的设置"""
 
-    task_size = [4194304, 12582912]  # 定义任务数据量范围 [4MB, 12MB]
-    task_density = [200, 1000]  # 定义计算密度范围 [200, 1000]
-
     def __init__(self, task_probability=None):
         """
         task_probability: 任务生成概率，即每个时隙生成任务的概率
@@ -41,11 +38,12 @@ class application:
 
     def generate_instance(self):
         """生成服务实例的大小"""
-        return np.random.randint(TASK_SIZE_RANGE[0], TASK_SIZE_RANGE[1] * 20)
+        return np.random.randint(TASK_SIZE_RANGE[0], TASK_SIZE_RANGE[1] * INSTANCE_SIZE_MULTIPLIER)
 
     def instance_change(self):
         """服务实例大小变化"""
-        instance_change_value = np.random.randint(-512000, 512000)
+        instance_change_value = np.random.randint(
+            INSTANCE_CHANGE_RANGE[0], INSTANCE_CHANGE_RANGE[1])
         self.instance = max(
             self.instance + instance_change_value, TASK_SIZE_RANGE[0])
 

@@ -55,6 +55,10 @@ TASK_DENSITY_RANGE = [200, 1000]  # 计算密度范围 [200, 1000]
 # 任务生成概率
 TASK_GENERATION_PROBABILITY = 0.7  # 每个时隙生成任务的概率
 
+# 服务实例参数
+INSTANCE_SIZE_MULTIPLIER = 20  # 服务实例大小相对于任务大小的倍数
+INSTANCE_CHANGE_RANGE = [-512000, 512000]  # 服务实例大小变化范围
+
 # ============== 时间参数 ==============
 BACKHAUL_ONE_HOP = 0.3  # 任务传输一跳的时间
 

@@ -4,9 +4,9 @@ import random
 import torch
 import numpy as np
 from scipy.spatial import KDTree
-from cellular_node import cellular_node
-from vehicles import vehicle
-from config import *
+from Environments.cellular_node import cellular_node
+from Environments.vehicles import vehicle
+from Environments.config import *
 
 
 def seed_everything(seed):
@@ -178,8 +178,6 @@ class Env:
                 (vec.application.get_task_density() - 200) / (1000 - 200))
             state.append((vec.application.instance - 4194304) /
                          (419430400 - 4194304))  # 归一化服务实例大小
-            # 归一化所属基站编号
-            state.append(vec.application.instance_belong_cellular / 15)
         self.state = np.array(state)
         return self.state
 
@@ -339,27 +337,6 @@ class Env:
         computation_time = compute_vol / capability
         return round(computation_time, 8), capability
 
-    def migration_time(self, vec, action):
-        """
-        计算迁移时间
-
-        Args:
-            vec (vehicle): 车辆对象
-            action (list): 动作列表
-
-        Returns:
-            tuple: (服务数据从本地基站发出的时间, 服务数据从本地基站经过回程链路传输的时间, 跳数)
-        """
-        ins_belong = vec.application.instance_belong_cellular  # 迁移之前服务实例所在的MEC服务器编号
-        ac = action[vec.vehicle_index]
-
-        hop = self.manhattan_distance(ins_belong, ac)
-        migration_time1 = vec.application.instance / \
-            self.cellular_list[ins_belong].backhaul_network
-        migration_time2 = hop * self.migration_one_hop
-
-        return round(migration_time1, 8), round(migration_time2, 8), hop
-
     def vehicle_all_consume(self, action):
         """
         计算单辆车完成任务的消耗
@@ -373,69 +350,22 @@ class Env:
         vec_result = []  # 存储每辆车的结果
         reward = 0  # 奖励
 
-        for vec in self.vehicle_list:  # 以下三个分支，具体只会进入一个
-            create_time = 0  # 创建虚拟机的时间，其实可以等同于迁移虚拟机准备的时间（环境准备）
+        for vec in self.vehicle_list:
             comm_time = 0  # 通信时间
             comp_time = 0  # 任务在目的基站上计算的时间
-            mig_time = 0  # 服务迁移时间
-            mig_prepare_time = 0  # 如果迁移目的地没有对应应用程序，需要提前准备环境
-            ac = action[vec.vehicle_index]
 
-            if vec.application.instance_belong_cellular == -1:
-                # 代表此时是第0个时隙，应该创建服务实例
-                mig_time = self.migration_prepare_time
+            # 计算通信时间
+            comm_time1, comm_time2_1, comm_time2_2, local_cellular, comm_hop = (
+                self.communication_time(vec, action))
+            comm_time = comm_time1 + comm_time2_1 + comm_time2_2  # 全部通信时间
 
-                comm_time1, comm_time2_1, comm_time2_2, local_cellular, comm_hop = (
-                    self.communication_time(
-                        vec, action))  # 进入通信函数
-                comm_time = comm_time1 + comm_time2_1 + comm_time2_2  # 全部通信时间
+            # 计算计算时间
+            comp_time, capability = self.computation_time(vec, action)
 
-                comp_time, capability = self.computation_time(
-                    vec, action)  # 进入计算函数计算
-
-            elif vec.application.instance_belong_cellular == ac:
-                # 服务实例上一时隙所在的服务器与新的动作指向的是同一个服务器，不进行迁移
-                comm_time1, comm_time2_1, comm_time2_2, local_cellular, comm_hop = (
-                    self.communication_time(
-                        vec, action))  # 进入通信函数
-                comm_time = comm_time1 + comm_time2_1 + comm_time2_2  # 全部通信时间
-
-                comp_time, capability = self.computation_time(
-                    vec, action)  # 进入计算函数计算
-
-            elif vec.application.instance_belong_cellular != ac:
-                # 服务实例上一时隙所在的服务器与新的动作指向的不是同一个服务器，应当进行迁移，迁移到action处
-                if self.cellular_list[ac].server_app == 0:
-                    mig_prepare_time = self.migration_prepare_time
-                mig_time1, mig_time2, mig_hop = self.migration_time(
-                    vec, action)  # 进入迁移函数
-                # 全部迁移时间，取迁移时间和环境准备时间最大的那一个
-                mig_time = max(mig_time1 + mig_time2, mig_prepare_time)
-
-                comm_time1, comm_time2_1, comm_time2_2, local_cellular, comm_hop = (
-                    self.communication_time(
-                        vec, action))  # 进入通信函数
-                comm_time = comm_time1 + comm_time2_1 + comm_time2_2  # 全部通信时间
-
-                comp_time, capability = self.computation_time(
-                    vec, action)  # 进入计算函数
-
-            all_time = comm_time + comp_time + mig_time  # 所有时间消耗
-            vec_result.append([comm_time, comp_time, mig_time, all_time])
+            all_time = comm_time + comp_time  # 所有时间消耗
+            vec_result.append([comm_time, comp_time, 0, all_time])  # 迁移时间设为0
             reward -= all_time
 
-        # 修改所有蜂窝网络的服务APP数量
-        for vec in self.vehicle_list:
-            if vec.application.instance_belong_cellular == action[vec.vehicle_index]:
-                pass  # 如果不迁移，就不进行处理
-            else:
-                # 统一删除先删除原服务器
-                if vec.application.instance_belong_cellular == -1:
-                    pass  # 最开始那个时隙，不做特殊处理
-                else:
-                    self.cellular_list[vec.application.instance_belong_cellular].server_app -= 1
-                # 在目标处添加
-                self.cellular_list[action[vec.vehicle_index]].server_app += 1
         return reward, vec_result
 
     def step(self, action):
@@ -470,8 +400,6 @@ class Env:
         for vec in self.vehicle_list:
             vec.application.generate_task()  # 车辆上的智能应用产生新任务
             vec.application.instance_change()  # 智能应用对应的服务实例大小变化
-            vec.application.instance_belong_cellular = final_action[
-                vec.vehicle_index]  # 车辆的服务所在的边缘服务器
         return self.get_state_normalize(), reward, vec_result, done
 
 
